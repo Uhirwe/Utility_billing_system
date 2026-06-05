@@ -1,0 +1,13 @@
+package com.utilitybilling.enums;
+
+public enum AuditActionType {
+    USER_CREATED,
+    ROLE_CHANGED,
+    METER_READING_RECORDED,
+    BILL_GENERATED,
+    BILL_APPROVED,
+    PAYMENT_PROCESSED,
+    TARIFF_UPDATED,
+    METER_DISCONNECTED,
+    METER_RECONNECTED
+}

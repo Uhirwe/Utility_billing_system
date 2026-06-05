@@ -1,0 +1,148 @@
+// Utility Billing System - DBDiagram.io Schema
+// Import at https://dbdiagram.io
+
+Project utility_billing_system {
+  database_type: 'PostgreSQL'
+  Note: 'Enterprise Utility Billing System'
+}
+
+Table roles {
+  id bigserial [pk, increment]
+  name varchar(50) [unique, not null, note: 'ROLE_ADMIN, ROLE_OPERATOR, ROLE_FINANCE, ROLE_CUSTOMER']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table users {
+  id bigserial [pk, increment]
+  full_names varchar(150) [not null]
+  email varchar(150) [unique, not null]
+  phone_number varchar(20) [not null]
+  password varchar(255) [not null]
+  status varchar(20) [not null, default: 'ACTIVE', note: 'ACTIVE | INACTIVE']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table user_roles {
+  user_id bigint [pk, ref: > users.id]
+  role_id bigint [pk, ref: > roles.id]
+}
+
+Table customers {
+  id bigserial [pk, increment]
+  full_names varchar(150) [not null]
+  national_id varchar(16) [unique, not null]
+  email varchar(150) [unique, not null]
+  phone_number varchar(20) [unique, not null]
+  address varchar(255) [not null]
+  status varchar(20) [not null, default: 'ACTIVE']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table meters {
+  id bigserial [pk, increment]
+  meter_number varchar(50) [unique, not null]
+  meter_type varchar(20) [not null, note: 'WATER | ELECTRICITY']
+  installation_date date [not null]
+  status varchar(20) [not null, default: 'ACTIVE']
+  customer_id bigint [not null, ref: > customers.id]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table meter_readings {
+  id bigserial [pk, increment]
+  meter_id bigint [not null, ref: > meters.id]
+  previous_reading decimal(12,2) [not null, default: 0]
+  current_reading decimal(12,2) [not null]
+  consumption decimal(12,2) [not null, default: 0]
+  reading_date date [not null]
+  reading_month int [not null]
+  reading_year int [not null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (meter_id, reading_month, reading_year) [unique]
+  }
+}
+
+Table tariffs {
+  id bigserial [pk, increment]
+  meter_type varchar(20) [not null]
+  tariff_name varchar(100) [not null]
+  rate_per_unit decimal(12,4) [not null]
+  fixed_charge decimal(12,2) [not null]
+  vat_percentage decimal(5,2) [not null]
+  late_penalty_percentage decimal(5,2) [not null]
+  version_number int [not null]
+  effective_date date [not null]
+  active boolean [not null, default: true]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (meter_type, version_number) [unique]
+  }
+}
+
+Table bills {
+  id bigserial [pk, increment]
+  bill_number varchar(50) [unique, not null]
+  customer_id bigint [not null, ref: > customers.id]
+  meter_id bigint [not null, ref: > meters.id]
+  billing_month int [not null]
+  billing_year int [not null]
+  consumption decimal(12,2) [not null]
+  tariff_id bigint [not null, ref: > tariffs.id]
+  fixed_charge decimal(12,2) [not null]
+  tax_amount decimal(12,2) [not null]
+  penalty_amount decimal(12,2) [not null]
+  total_amount decimal(12,2) [not null]
+  paid_amount decimal(12,2) [not null, default: 0]
+  balance decimal(12,2) [not null]
+  bill_status varchar(20) [not null, default: 'PENDING']
+  due_date date [not null]
+  generated_date timestamp [not null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (meter_id, billing_month, billing_year) [unique]
+  }
+}
+
+Table payments {
+  id bigserial [pk, increment]
+  payment_reference varchar(50) [unique, not null]
+  bill_id bigint [not null, ref: > bills.id]
+  amount_paid decimal(12,2) [not null]
+  payment_method varchar(20) [not null, note: 'CASH | MOBILE_MONEY | BANK_TRANSFER | CARD']
+  payment_date timestamp [not null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table notifications {
+  id bigserial [pk, increment]
+  customer_id bigint [not null, ref: > customers.id]
+  title varchar(150) [not null]
+  message text [not null]
+  notification_date timestamp [not null]
+  read_status boolean [not null, default: false]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+// Relationships
+Ref: user_roles.user_id > users.id
+Ref: user_roles.role_id > roles.id
+Ref: meters.customer_id > customers.id
+Ref: meter_readings.meter_id > meters.id
+Ref: bills.customer_id > customers.id
+Ref: bills.meter_id > meters.id
+Ref: bills.tariff_id > tariffs.id
+Ref: payments.bill_id > bills.id
+Ref: notifications.customer_id > customers.id
