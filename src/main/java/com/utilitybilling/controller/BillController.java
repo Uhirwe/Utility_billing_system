@@ -1,8 +1,11 @@
 package com.utilitybilling.controller;
 
+import com.utilitybilling.dto.bill.ApproveBillResponse;
 import com.utilitybilling.dto.bill.BillRequest;
 import com.utilitybilling.dto.bill.BillResponse;
 import com.utilitybilling.dto.bill.GenerateMonthlyBillsRequest;
+import com.utilitybilling.dto.bill.GenerateMonthlyBillsResponse;
+import com.utilitybilling.dto.email.EmailDeliveryResult;
 import com.utilitybilling.payload.ApiResponse;
 import com.utilitybilling.service.BillService;
 import com.utilitybilling.service.CustomerAccessService;
@@ -32,28 +35,50 @@ public class BillController {
 
     @PostMapping("/generate")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Admin generates a bill for a specific meter and period")
+    @Operation(summary = "Admin generates a bill for a specific meter and period",
+            description = "Creates an unapproved bill. Customer is emailed only after Finance approves via PATCH /bills/{id}/approve.")
     public ApiResponse<BillResponse> generateBill(
             @AuthenticationPrincipal UserDetails actor,
             @Valid @RequestBody BillRequest request) {
-        return ApiResponse.success("Bill generated", billService.generateBill(request, actor.getUsername()));
+        return ApiResponse.success("Bill generated — pending Finance approval", billService.generateBill(request, actor.getUsername()));
     }
 
     @PostMapping("/generate-monthly")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Generate monthly bills for all active postpaid meters (stored procedure)")
-    public ApiResponse<Void> generateMonthlyBills(@Valid @RequestBody GenerateMonthlyBillsRequest request) {
-        billService.generateMonthlyBills(request);
-        return ApiResponse.success("Monthly bills generation initiated", null);
+    @Operation(summary = "Generate monthly bills for all active postpaid meters (stored procedure)",
+            description = "Creates unapproved bills. Finance must approve each bill to email customers.")
+    public ApiResponse<GenerateMonthlyBillsResponse> generateMonthlyBills(
+            @Valid @RequestBody GenerateMonthlyBillsRequest request) {
+        GenerateMonthlyBillsResponse result = billService.generateMonthlyBills(request);
+        return ApiResponse.success(
+                "Generated " + result.getBillsGenerated() + " bill(s) — pending Finance approval",
+                result);
     }
 
     @PatchMapping("/{id}/approve")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE')")
-    @Operation(summary = "Approve a generated bill (ADMIN or FINANCE)")
-    public ApiResponse<BillResponse> approveBill(
+    @PreAuthorize("hasRole('FINANCE')")
+    @Operation(summary = "Finance approves a generated bill and emails the customer",
+            description = "Only FINANCE can approve. Check data.emailDelivery in the response.")
+    public ApiResponse<ApproveBillResponse> approveBill(
             @AuthenticationPrincipal UserDetails actor,
             @PathVariable Long id) {
-        return ApiResponse.success("Bill approved", billService.approveBill(id, actor.getUsername()));
+        ApproveBillResponse result = billService.approveBill(id, actor.getUsername());
+        String message = result.getEmailDelivery().isSent()
+                ? "Bill approved and emailed to " + result.getEmailDelivery().getRecipient()
+                : "Bill approved but email NOT sent: " + result.getEmailDelivery().getDetail();
+        return ApiResponse.success(message, result);
+    }
+
+    @PostMapping("/{id}/resend-email")
+    @PreAuthorize("hasRole('FINANCE')")
+    @Operation(summary = "Resend bill email to customer (testing / resend)",
+            description = "Does not change bill status or regenerate the bill. Use to test SMTP or resend an existing bill email.")
+    public ApiResponse<EmailDeliveryResult> resendBillEmail(@PathVariable Long id) {
+        EmailDeliveryResult result = billService.resendBillEmail(id);
+        String message = result.isSent()
+                ? "Bill email resent to " + result.getRecipient()
+                : "Email NOT sent: " + result.getDetail();
+        return ApiResponse.success(message, result);
     }
 
     @PostMapping("/process-overdue")

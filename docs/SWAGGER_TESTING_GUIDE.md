@@ -291,6 +291,27 @@ Run step 4.4 again with same meter/month/year.
 
 ---
 
+### Test bill email without changing bills (Option 2 — recommended for SMTP)
+
+Use this when you only want to verify email delivery — no bill regeneration, no approval change.
+
+1. Login as **Finance** → Authorize
+2. Pick any existing bill ID (`GET /bills` — e.g. `1` from seed data)
+3. Call:
+
+```
+POST /bills/{billId}/resend-email
+```
+
+No request body. The bill’s `approved` status and amounts stay the same.
+
+✅ Expect: `data.sent: true`, `data.channel: "SMTP"`, `data.recipient` = customer email  
+⚠️ If SMTP is not configured: `sent: false`, `channel: "CONSOLE"` — check server logs instead of inbox
+
+Configure real delivery in `application-local.properties` (copy from `application-local.properties.example`), then restart the app.
+
+---
+
 ### PHASE 5 — Finance: approve & pay (3 min)
 
 #### 5.1 Login as Finance → Authorize
@@ -438,7 +459,8 @@ GET /audit-logs
 | 18 | GET | /tariffs | ADMIN+ | |
 | 19 | POST | /tariffs | ADMIN | |
 | 20 | POST | /bills/generate | ADMIN | |
-| 21 | PATCH | /bills/{id}/approve | ADMIN/FINANCE | |
+| 21 | PATCH | /bills/{id}/approve | FINANCE | |
+| 21b | POST | /bills/{id}/resend-email | FINANCE | Test SMTP only — no state change |
 | 22 | GET | /bills/me | CUSTOMER | |
 | 23 | POST | /payments | FINANCE | |
 | 24 | GET | /payments/me | CUSTOMER | |

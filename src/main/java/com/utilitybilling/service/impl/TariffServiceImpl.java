@@ -58,11 +58,13 @@ public class TariffServiceImpl implements TariffService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<TariffResponse> getTariffs(Pageable pageable) {
         return tariffRepository.findAll(pageable).map(tariffMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<TariffResponse> getTariffsByType(MeterType meterType, Pageable pageable) {
         return tariffRepository.findByMeterType(meterType, pageable).map(tariffMapper::toResponse);
     }
@@ -84,6 +86,7 @@ public class TariffServiceImpl implements TariffService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public TariffResponse getTariffById(Long id) {
         return tariffMapper.toResponse(findTariff(id));
     }

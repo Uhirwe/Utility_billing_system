@@ -3,24 +3,30 @@ package com.utilitybilling.service.impl;
 import com.utilitybilling.dto.email.EmailDeliveryResult;
 import com.utilitybilling.enums.RoleName;
 import com.utilitybilling.service.EmailService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.TextStyle;
 import java.util.Locale;
+import java.util.Optional;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
 
-    private final JavaMailSender mailSender;
+    private final Optional<JavaMailSender> mailSender;
+
+    @Autowired
+    public EmailServiceImpl(Optional<JavaMailSender> mailSender) {
+        this.mailSender = mailSender;
+    }
 
     @Value("${app.mail.from:}")
     private String fromEmail;
@@ -28,7 +34,7 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.login-url:http://localhost:8080/api/swagger-ui.html}")
     private String defaultLoginUrl;
 
-    @Value("${app.mail.provider:smtp}")
+    @Value("${app.mail.provider:smtp-with-fallback}")
     private String mailProvider;
 
     @Override
@@ -100,11 +106,24 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public EmailDeliveryResult sendBillGeneratedEmail(String to, String fullName, String billNumber,
-                                                    BigDecimal totalAmount, int month, int year) {
+                                                    BigDecimal totalAmount, int month, int year,
+                                                    LocalDate dueDate) {
         String monthName = Month.of(month).getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-        String body = "Dear %s, Your %s/%d utility bill of %s FRW has been successfully processed."
-                .formatted(fullName, monthName, year, totalAmount);
-        return deliver(to, "Bill Generated", body);
+        String body = """
+                Dear %s,
+
+                Your %s %d utility bill has been generated.
+
+                Bill Number: %s
+                Amount Due: %s FRW
+                Due Date: %s
+
+                View your bills after login: %s
+
+                Regards,
+                WASAC/REG Utility Billing System
+                """.formatted(fullName, monthName, year, billNumber, totalAmount, dueDate, defaultLoginUrl);
+        return deliver(to, "Utility Bill - " + billNumber, body);
     }
 
     @Override
@@ -146,6 +165,10 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private boolean trySmtp(String to, String subject, String body) {
+        if (mailSender.isEmpty()) {
+            log.error("SMTP skipped — JavaMailSender not configured. Copy application-local.properties.example and set spring.mail.*.");
+            return false;
+        }
         if (fromEmail == null || fromEmail.isBlank()) {
             log.error("SMTP skipped — app.mail.from is empty.");
             return false;
@@ -156,7 +179,7 @@ public class EmailServiceImpl implements EmailService {
             message.setTo(to);
             message.setSubject(subject);
             message.setText(body);
-            mailSender.send(message);
+            mailSender.get().send(message);
             log.info("SMTP email sent to={} subject={}", to, subject);
             return true;
         } catch (Exception ex) {

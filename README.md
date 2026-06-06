@@ -10,7 +10,34 @@ WASAC (water) and REG (electricity) are unifying billing. Water is postpaid; ele
 
 Java 21 · Spring Boot 3.3.5 · PostgreSQL · JPA · Spring Security + JWT · Swagger
 
+## Prerequisites
+
+This project requires **JDK 21**. Maven will fail on other Java versions.
+
+```bash
+# macOS — point JAVA_HOME at JDK 21 before building
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+java -version   # should report 21.x
+mvn clean install
+```
+
+The repo includes `.java-version` for jenv, asdf, and similar tools.
+
 ## Database Setup
+
+**macOS / Linux**
+
+```bash
+export PGPASSWORD="your_postgres_password"
+createdb -U postgres utility_billing_db 2>/dev/null || true
+tail -n +7 database/schema.sql | psql -U postgres -d utility_billing_db
+psql -U postgres -d utility_billing_db -f database/migration-v2-business-rules.sql
+psql -U postgres -d utility_billing_db -f database/migration-v3-wasac-business-rules.sql
+psql -U postgres -d utility_billing_db -f database/migration-v4-project-spec.sql
+tail -n +7 database/test-data.sql | psql -U postgres -d utility_billing_db
+```
+
+**Windows (PowerShell)**
 
 ```powershell
 cd database
@@ -27,7 +54,7 @@ psql -U postgres -d utility_billing_db -f database/test-data.sql
 |------|-------------|--------|
 | **1** | JWT auth, signup/login, secure endpoints | ✅ |
 | **1** | User: names, email, phone (country code + local), password rules, status | ✅ |
-| **1** | ROLE_ADMIN: tariffs, approve bills, manage users | ✅ |
+| **1** | ROLE_ADMIN: tariffs, generate bills, manage users | ✅ |
 | **1** | ROLE_OPERATOR: capture readings | ✅ |
 | **1** | ROLE_FINANCE: approve bills + payments | ✅ |
 | **1** | ROLE_CUSTOMER: view bills + payment history | ✅ |
@@ -44,7 +71,7 @@ psql -U postgres -d utility_billing_db -f database/test-data.sql
 
 | Role | Key Endpoints |
 |------|---------------|
-| **ADMIN** | `GET/PUT/DELETE /users`, `POST/PUT /tariffs`, `POST /bills/generate`, `PATCH /bills/{id}/approve` |
+| **ADMIN** | `GET/PUT/DELETE /users`, `POST/PUT /tariffs`, `POST /bills/generate` |
 | **OPERATOR** | `POST /readings`, `POST /meters`, `PATCH /customers/{id}/activate` |
 | **FINANCE** | `PATCH /bills/{id}/approve`, `POST /payments` |
 | **CUSTOMER** | `POST /auth/register`, `GET /bills/me`, `GET /payments/me`, `GET /customers/me` |

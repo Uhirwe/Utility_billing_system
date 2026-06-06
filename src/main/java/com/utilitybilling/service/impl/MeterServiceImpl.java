@@ -107,6 +107,7 @@ public class MeterServiceImpl implements MeterService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<MeterResponse> getCustomerMeters(Long customerId) {
         if (!customerRepository.existsById(customerId)) {
             throw new ResourceNotFoundException("Customer not found with id: " + customerId);
@@ -117,6 +118,7 @@ public class MeterServiceImpl implements MeterService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public MeterResponse getMeterById(Long id) {
         return meterMapper.toResponse(findMeter(id));
     }

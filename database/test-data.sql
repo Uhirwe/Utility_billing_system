@@ -45,8 +45,8 @@ INSERT INTO meters (id, meter_number, meter_type, installation_date, status, bil
 SELECT setval('meters_id_seq', 4);
 
 INSERT INTO tariffs (id, meter_type, tariff_name, rate_per_unit, fixed_charge, vat_percentage, late_penalty_percentage, version_number, effective_date, active) VALUES
-    (1, 'WATER', 'Residential Water Tariff v1', 450.0000, 2000.00, 18.00, 5.00, 1, CURRENT_DATE, TRUE),
-    (2, 'ELECTRICITY', 'Residential Electricity Tariff v1', 180.0000, 3500.00, 18.00, 5.00, 1, CURRENT_DATE, TRUE);
+    (1, 'WATER', 'Residential Water Tariff v1', 450.0000, 2000.00, 18.00, 5.00, 1, '2024-01-01', TRUE),
+    (2, 'ELECTRICITY', 'Residential Electricity Tariff v1', 180.0000, 3500.00, 18.00, 5.00, 1, '2024-01-01', TRUE);
 SELECT setval('tariffs_id_seq', 2);
 
 INSERT INTO tariff_tiers (tariff_id, tier_name, min_units, max_units, rate_per_unit) VALUES

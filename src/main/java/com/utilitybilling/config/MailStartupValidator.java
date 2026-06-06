@@ -1,22 +1,28 @@
 package com.utilitybilling.config;
 
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 
 /**
  * Tests Gmail SMTP on startup and prints actionable instructions if auth fails.
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class MailStartupValidator {
 
-    private final JavaMailSender mailSender;
+    private final Optional<JavaMailSender> mailSender;
+
+    @Autowired
+    public MailStartupValidator(Optional<JavaMailSender> mailSender) {
+        this.mailSender = mailSender;
+    }
 
     @Value("${app.mail.validate-on-startup:true}")
     private boolean validateOnStartup;
@@ -34,7 +40,11 @@ public class MailStartupValidator {
             return;
         }
 
-        if (!(mailSender instanceof JavaMailSenderImpl impl)) {
+        JavaMailSender sender = mailSender.orElse(null);
+        if (!(sender instanceof JavaMailSenderImpl impl)) {
+            if (sender == null) {
+                log.warn("JavaMailSender not configured — set spring.mail.* in application-local.properties for SMTP.");
+            }
             return;
         }
 

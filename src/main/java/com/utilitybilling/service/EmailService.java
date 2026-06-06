@@ -10,6 +10,8 @@ public interface EmailService {
     EmailDeliveryResult sendWelcomeEmail(String to, String fullName, String temporaryPassword, RoleName role, String loginUrl);
     EmailDeliveryResult sendRoleUpdateEmail(String to, String fullName, RoleName newRole);
     EmailDeliveryResult sendRoleRevokedEmail(String to, String fullName);
-    EmailDeliveryResult sendBillGeneratedEmail(String to, String fullName, String billNumber, BigDecimal totalAmount, int month, int year);
+    EmailDeliveryResult sendBillGeneratedEmail(String to, String fullName, String billNumber,
+                                               BigDecimal totalAmount, int month, int year,
+                                               java.time.LocalDate dueDate);
     EmailDeliveryResult sendPaymentConfirmationEmail(String to, String fullName, String paymentReference, BigDecimal amountPaid, String billNumber);
 }

@@ -135,11 +135,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
         return userMapper.toResponse(findUser(id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<UserResponse> getAllUsers(Pageable pageable) {
         Pageable safePageable = PageableSanitizer.forUser(pageable);
         return userRepository.findAll(safePageable).map(userMapper::toResponse);

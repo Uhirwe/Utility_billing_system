@@ -27,6 +27,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final CustomerMapper customerMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public CustomerResponse getMyProfile(String userEmail) {
         return customerMapper.toResponse(findCustomerByUserEmail(userEmail));
     }
@@ -59,6 +60,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CustomerResponse getCustomerById(Long id, String requesterEmail) {
         Customer customer = findCustomer(id);
         User requester = userRepository.findByEmail(requesterEmail)
@@ -81,6 +83,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<CustomerResponse> getAllCustomers(Pageable pageable) {
         return customerRepository.findAll(pageable).map(customerMapper::toResponse);
     }

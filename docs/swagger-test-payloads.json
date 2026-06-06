@@ -1,0 +1,1092 @@
+{
+  "instructions": {
+    "swaggerUrl": "http://localhost:8080/api/swagger-ui.html",
+    "howToUse": [
+      "1. (Recommended) Reset DB first — see resetDatabase at bottom of this file.",
+      "2. Work through steps in order (step 1 → 52).",
+      "3. For each step: login as the listed role → click Authorize → paste Bearer {token}.",
+      "4. Open the Swagger tag + endpoint shown → paste requestBody into the body field.",
+      "5. For pathParams / queryParams, type the values shown (Swagger has separate fields).",
+      "6. After each step, copy IDs from saveFromResponse into the variables section below.",
+      "7. GET / PATCH with no body — only set path/query params and click Execute."
+    ],
+    "allPasswords": "Admin@12345",
+    "authorizeFormat": "Bearer {paste accessToken here}"
+  },
+  "seedCredentials": {
+    "admin": { "email": "admin@utilitybilling.rw", "password": "Admin@12345" },
+    "operator": { "email": "operator@utilitybilling.rw", "password": "Admin@12345" },
+    "finance": { "email": "finance@utilitybilling.rw", "password": "Admin@12345" },
+    "customer": { "email": "customer@utilitybilling.rw", "password": "Admin@12345" }
+  },
+  "seedIds": {
+    "adminUserId": 1,
+    "operatorUserId": 2,
+    "financeUserId": 3,
+    "customerUserId": 4,
+    "customerRecordId": 1,
+    "meterWaterId": 1,
+    "meterElectricityId": 2,
+    "meterPatrickWaterId": 3,
+    "tariffWaterId": 1,
+    "tariffElectricityId": 2,
+    "mayBillingMonth": 5,
+    "mayBillingYear": 2026,
+    "juneBillingMonth": 6,
+    "juneBillingYear": 2026
+  },
+  "variables": {
+    "_comment": "Fill these from API responses as you test",
+    "adminToken": "",
+    "operatorToken": "",
+    "financeToken": "",
+    "customerToken": "",
+    "newCustomerToken": "",
+    "newStaffUserId": "",
+    "newMeterId": "",
+    "newReadingId": "",
+    "waterBillId": "",
+    "electricityBillId": "",
+    "notificationId": ""
+  },
+  "steps": [
+    {
+      "step": 1,
+      "phase": "AUTH",
+      "role": "PUBLIC",
+      "tag": "Authentication",
+      "method": "POST",
+      "path": "/auth/login",
+      "summary": "Login as Admin",
+      "authorize": false,
+      "requestBody": {
+        "email": "admin@utilitybilling.rw",
+        "password": "Admin@12345"
+      },
+      "saveFromResponse": { "adminToken": "data.accessToken" }
+    },
+    {
+      "step": 2,
+      "phase": "AUTH",
+      "role": "ADMIN",
+      "tag": "User Management",
+      "method": "GET",
+      "path": "/users",
+      "summary": "List all users",
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 3,
+      "phase": "AUTH",
+      "role": "ADMIN",
+      "tag": "User Management",
+      "method": "GET",
+      "path": "/users/{id}",
+      "summary": "Get admin user by ID",
+      "pathParams": { "id": 1 }
+    },
+    {
+      "step": 4,
+      "phase": "AUTH",
+      "role": "ADMIN",
+      "tag": "User Management",
+      "method": "POST",
+      "path": "/users",
+      "summary": "Create new operator (temp password emailed / logged in console)",
+      "requestBody": {
+        "firstName": "Swagger",
+        "lastName": "Operator",
+        "email": "swagger.operator@email.rw",
+        "phoneCountryCode": "+250",
+        "phoneNumber": "0788111001",
+        "role": "ROLE_OPERATOR"
+      },
+      "saveFromResponse": { "newStaffUserId": "data.user.id" }
+    },
+    {
+      "step": 5,
+      "phase": "AUTH",
+      "role": "PUBLIC",
+      "tag": "Authentication",
+      "method": "POST",
+      "path": "/auth/first-login/change-password",
+      "summary": "New staff changes temp password (use temp password from email/console)",
+      "authorize": false,
+      "requestBody": {
+        "email": "swagger.operator@email.rw",
+        "temporaryPassword": "PASTE_TEMP_PASSWORD_FROM_STEP_4",
+        "newPassword": "SwaggerOp@123"
+      }
+    },
+    {
+      "step": 6,
+      "phase": "AUTH",
+      "role": "PUBLIC",
+      "tag": "Authentication",
+      "method": "POST",
+      "path": "/auth/register",
+      "summary": "Customer self-registration",
+      "authorize": false,
+      "requestBody": {
+        "firstName": "Swagger",
+        "lastName": "Customer",
+        "nationalId": "1199887766558801",
+        "email": "swagger.customer@email.rw",
+        "phoneCountryCode": "+250",
+        "phoneNumber": "0788118801",
+        "address": "Kigali, Nyarugenge",
+        "dateOfBirth": "1998-06-15",
+        "password": "SwaggerCust@123"
+      },
+      "saveFromResponse": { "newCustomerToken": "data.accessToken" }
+    },
+    {
+      "step": 7,
+      "phase": "AUTH",
+      "role": "CUSTOMER",
+      "tag": "Authentication",
+      "method": "POST",
+      "path": "/auth/login",
+      "summary": "Login as new customer (or use token from step 6)",
+      "authorize": false,
+      "requestBody": {
+        "email": "swagger.customer@email.rw",
+        "password": "SwaggerCust@123"
+      },
+      "saveFromResponse": { "newCustomerToken": "data.accessToken" }
+    },
+    {
+      "step": 8,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Customer Management",
+      "method": "GET",
+      "path": "/customers/me",
+      "summary": "View own customer profile"
+    },
+    {
+      "step": 9,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Customer Management",
+      "method": "PUT",
+      "path": "/customers/me",
+      "summary": "Update own profile",
+      "requestBody": {
+        "address": "Kigali, Gasabo - Swagger Updated",
+        "phoneCountryCode": "+250",
+        "phoneNumber": "0788118801"
+      }
+    },
+    {
+      "step": 10,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Authentication",
+      "method": "PUT",
+      "path": "/auth/profile",
+      "summary": "Update own user profile",
+      "requestBody": {
+        "firstName": "Swagger",
+        "lastName": "Customer Updated",
+        "phoneCountryCode": "+250",
+        "phoneNumber": "0788118801"
+      }
+    },
+    {
+      "step": 11,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Authentication",
+      "method": "PUT",
+      "path": "/auth/change-password",
+      "summary": "Change password (optional)",
+      "requestBody": {
+        "currentPassword": "SwaggerCust@123",
+        "newPassword": "SwaggerCust@456"
+      },
+      "note": "If you run this, use SwaggerCust@456 for later customer logins"
+    },
+    {
+      "step": 12,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Authentication",
+      "method": "POST",
+      "path": "/auth/login",
+      "summary": "Login as Operator",
+      "authorize": false,
+      "requestBody": {
+        "email": "operator@utilitybilling.rw",
+        "password": "Admin@12345"
+      },
+      "saveFromResponse": { "operatorToken": "data.accessToken" }
+    },
+    {
+      "step": 13,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Customer Management",
+      "method": "GET",
+      "path": "/customers",
+      "summary": "List customers",
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 14,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Customer Management",
+      "method": "GET",
+      "path": "/customers/{id}",
+      "summary": "View customer 1",
+      "pathParams": { "id": 1 }
+    },
+    {
+      "step": 15,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Customer Management",
+      "method": "PATCH",
+      "path": "/customers/{id}/deactivate",
+      "summary": "Deactivate inactive test customer 4",
+      "pathParams": { "id": 4 }
+    },
+    {
+      "step": 16,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Customer Management",
+      "method": "PATCH",
+      "path": "/customers/{id}/activate",
+      "summary": "Re-activate customer 4",
+      "pathParams": { "id": 4 }
+    },
+    {
+      "step": 17,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Management",
+      "method": "GET",
+      "path": "/meters/customer/{customerId}",
+      "summary": "View meters for customer 1",
+      "pathParams": { "customerId": 1 }
+    },
+    {
+      "step": 18,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Management",
+      "method": "POST",
+      "path": "/meters",
+      "summary": "Create new water meter for customer 2 (Marie)",
+      "requestBody": {
+        "meterNumber": "WM-10005",
+        "meterType": "WATER",
+        "installationDate": "2024-06-01",
+        "customerId": 2,
+        "billingMode": "POSTPAID"
+      },
+      "saveFromResponse": { "newMeterId": "data.id" }
+    },
+    {
+      "step": 19,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Management",
+      "method": "PUT",
+      "path": "/meters/{id}",
+      "summary": "Update meter (use newMeterId from step 18, or 5 if fresh DB)",
+      "pathParams": { "id": "{{newMeterId}}" },
+      "requestBody": {
+        "meterNumber": "WM-10005",
+        "meterType": "WATER",
+        "installationDate": "2024-06-01",
+        "customerId": 2,
+        "billingMode": "POSTPAID"
+      }
+    },
+    {
+      "step": 20,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Management",
+      "method": "PUT",
+      "path": "/meters/{id}/assign/{customerId}",
+      "summary": "Assign meter to customer (optional re-assign)",
+      "pathParams": { "id": "{{newMeterId}}", "customerId": 2 }
+    },
+    {
+      "step": 21,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Management",
+      "method": "GET",
+      "path": "/meters/{id}",
+      "summary": "Get meter by ID",
+      "pathParams": { "id": 1 }
+    },
+    {
+      "step": 22,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Reading Management",
+      "method": "POST",
+      "path": "/readings",
+      "summary": "Record first reading for new meter WM-10005",
+      "requestBody": {
+        "meterId": "{{newMeterId}}",
+        "previousReading": 0,
+        "currentReading": 45.5,
+        "readingDate": "2026-06-01"
+      },
+      "note": "Replace meterId with number from step 18 (often 5 on fresh DB)"
+    },
+    {
+      "step": 23,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Reading Management",
+      "method": "POST",
+      "path": "/readings",
+      "summary": "Record June reading for meter 1 (water) — previous MUST match last current (125.50 on fresh DB)",
+      "requestBody": {
+        "meterId": 1,
+        "previousReading": 125.5,
+        "currentReading": 140.0,
+        "readingDate": "2026-06-05"
+      }
+    },
+    {
+      "step": 24,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Reading Management",
+      "method": "POST",
+      "path": "/readings",
+      "summary": "Record June reading for meter 2 (electricity) — previous MUST match 620.00 on fresh DB",
+      "requestBody": {
+        "meterId": 2,
+        "previousReading": 620.0,
+        "currentReading": 680.0,
+        "readingDate": "2026-06-05"
+      }
+    },
+    {
+      "step": 25,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Reading Management",
+      "method": "GET",
+      "path": "/readings/meter/{meterId}",
+      "summary": "Reading history for meter 1",
+      "pathParams": { "meterId": 1 },
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 26,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Reading Management",
+      "method": "GET",
+      "path": "/readings/monthly",
+      "summary": "All readings for June 2026",
+      "queryParams": { "month": 6, "year": 2026 }
+    },
+    {
+      "step": 27,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Reading Management",
+      "method": "PUT",
+      "path": "/readings/{id}",
+      "summary": "Update a reading (optional)",
+      "pathParams": { "id": "{{newReadingId}}" },
+      "requestBody": {
+        "meterId": 1,
+        "previousReading": 125.5,
+        "currentReading": 141.0,
+        "readingDate": "2026-06-05"
+      }
+    },
+    {
+      "step": 28,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "Authentication",
+      "method": "POST",
+      "path": "/auth/login",
+      "summary": "Login as Admin",
+      "authorize": false,
+      "requestBody": {
+        "email": "admin@utilitybilling.rw",
+        "password": "Admin@12345"
+      },
+      "saveFromResponse": { "adminToken": "data.accessToken" }
+    },
+    {
+      "step": 29,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "Tariff Management",
+      "method": "GET",
+      "path": "/tariffs",
+      "summary": "List tariffs",
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 30,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "Tariff Management",
+      "method": "GET",
+      "path": "/tariffs/type/{meterType}",
+      "summary": "Tariffs by type WATER",
+      "pathParams": { "meterType": "WATER" },
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 31,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "Tariff Management",
+      "method": "GET",
+      "path": "/tariffs/{id}",
+      "summary": "Get tariff by ID",
+      "pathParams": { "id": 1 }
+    },
+    {
+      "step": 32,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "Tariff Management",
+      "method": "POST",
+      "path": "/tariffs",
+      "summary": "Create new tariff version (optional)",
+      "requestBody": {
+        "meterType": "WATER",
+        "tariffName": "Residential Water Tariff v2",
+        "ratePerUnit": 460.0,
+        "fixedCharge": 2100.0,
+        "vatPercentage": 18.0,
+        "latePenaltyPercentage": 5.0,
+        "effectiveDate": "2026-06-01",
+        "tiers": [
+          { "tierName": "0-10 units", "minUnits": 0, "maxUnits": 10, "ratePerUnit": 410.0 },
+          { "tierName": "11-30 units", "minUnits": 10, "maxUnits": 30, "ratePerUnit": 460.0 },
+          { "tierName": "31-100 units", "minUnits": 30, "maxUnits": 100, "ratePerUnit": 510.0 }
+        ]
+      }
+    },
+    {
+      "step": 33,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "Tariff Management",
+      "method": "PUT",
+      "path": "/tariffs/{id}",
+      "summary": "Update tariff (optional — tariff id 1)",
+      "pathParams": { "id": 1 },
+      "requestBody": {
+        "meterType": "WATER",
+        "tariffName": "Residential Water Tariff v1",
+        "ratePerUnit": 450.0,
+        "fixedCharge": 2000.0,
+        "vatPercentage": 18.0,
+        "latePenaltyPercentage": 5.0,
+        "effectiveDate": "2024-01-01",
+        "tiers": [
+          { "tierName": "0-10 units", "minUnits": 0, "maxUnits": 10, "ratePerUnit": 400.0 },
+          { "tierName": "11-30 units", "minUnits": 10, "maxUnits": 30, "ratePerUnit": 450.0 },
+          { "tierName": "31-100 units", "minUnits": 30, "maxUnits": 100, "ratePerUnit": 500.0 }
+        ]
+      }
+    },
+    {
+      "step": 34,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "Tariff Management",
+      "method": "PATCH",
+      "path": "/tariffs/{id}/deactivate",
+      "summary": "Deactivate tariff (optional test)",
+      "pathParams": { "id": 1 }
+    },
+    {
+      "step": 35,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "Tariff Management",
+      "method": "PATCH",
+      "path": "/tariffs/{id}/activate",
+      "summary": "Re-activate tariff",
+      "pathParams": { "id": 1 }
+    },
+    {
+      "step": 36,
+      "phase": "BILLING",
+      "role": "ADMIN",
+      "tag": "Billing Management",
+      "method": "POST",
+      "path": "/bills/generate",
+      "summary": "Generate WATER bill — May 2026 (works on fresh DB with seed readings)",
+      "requestBody": {
+        "meterId": 1,
+        "billingMonth": 5,
+        "billingYear": 2026
+      },
+      "saveFromResponse": { "waterBillId": "data.id" },
+      "note": "billingMonth/Year MUST match reading month in DB. Use 5 for May seed readings, or 6 after step 23."
+    },
+    {
+      "step": 37,
+      "phase": "BILLING",
+      "role": "ADMIN",
+      "tag": "Billing Management",
+      "method": "POST",
+      "path": "/bills/generate",
+      "summary": "Generate ELECTRICITY bill — May 2026",
+      "requestBody": {
+        "meterId": 2,
+        "billingMonth": 5,
+        "billingYear": 2026
+      },
+      "saveFromResponse": { "electricityBillId": "data.id" }
+    },
+    {
+      "step": 38,
+      "phase": "BILLING",
+      "role": "ADMIN",
+      "tag": "Billing Management",
+      "method": "POST",
+      "path": "/bills/generate",
+      "summary": "Generate WATER bill — June 2026 (after step 23 reading)",
+      "requestBody": {
+        "meterId": 1,
+        "billingMonth": 6,
+        "billingYear": 2026
+      }
+    },
+    {
+      "step": 39,
+      "phase": "BILLING",
+      "role": "ADMIN",
+      "tag": "Billing Management",
+      "method": "POST",
+      "path": "/bills/generate-monthly",
+      "summary": "Batch generate all monthly bills (stored procedure)",
+      "requestBody": {
+        "billingMonth": 6,
+        "billingYear": 2026
+      }
+    },
+    {
+      "step": 40,
+      "phase": "BILLING",
+      "role": "ADMIN",
+      "tag": "Billing Management",
+      "method": "GET",
+      "path": "/bills",
+      "summary": "List all bills",
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 41,
+      "phase": "BILLING",
+      "role": "ADMIN",
+      "tag": "Billing Management",
+      "method": "GET",
+      "path": "/bills/monthly",
+      "summary": "Bills for May 2026",
+      "queryParams": { "month": 5, "year": 2026, "page": 1 }
+    },
+    {
+      "step": 42,
+      "phase": "BILLING",
+      "role": "ADMIN",
+      "tag": "Billing Management",
+      "method": "GET",
+      "path": "/bills/customer/{customerId}",
+      "summary": "Bills for customer 1",
+      "pathParams": { "customerId": 1 },
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 43,
+      "phase": "BILLING",
+      "role": "ADMIN",
+      "tag": "Billing Management",
+      "method": "GET",
+      "path": "/bills/{id}",
+      "summary": "Get bill by ID (use waterBillId)",
+      "pathParams": { "id": "{{waterBillId}}" }
+    },
+    {
+      "step": 44,
+      "phase": "FINANCE",
+      "role": "FINANCE",
+      "tag": "Authentication",
+      "method": "POST",
+      "path": "/auth/login",
+      "summary": "Login as Finance",
+      "authorize": false,
+      "requestBody": {
+        "email": "finance@utilitybilling.rw",
+        "password": "Admin@12345"
+      },
+      "saveFromResponse": { "financeToken": "data.accessToken" }
+    },
+    {
+      "step": "44b",
+      "phase": "FINANCE",
+      "role": "FINANCE",
+      "tag": "Billing Management",
+      "method": "POST",
+      "path": "/bills/{id}/resend-email",
+      "summary": "Test bill email (no approve, no regenerate)",
+      "pathParams": { "id": 1 },
+      "note": "Use any existing bill id. Does not change approved status or bill data. Check data.sent and data.channel in response.",
+      "optional": true
+    },
+    {
+      "step": 45,
+      "phase": "FINANCE",
+      "role": "FINANCE",
+      "tag": "Billing Management",
+      "method": "PATCH",
+      "path": "/bills/{id}/approve",
+      "summary": "Approve water bill",
+      "pathParams": { "id": "{{waterBillId}}" },
+      "note": "Use bill id from step 36 (often 1 on fresh DB)"
+    },
+    {
+      "step": 46,
+      "phase": "FINANCE",
+      "role": "FINANCE",
+      "tag": "Billing Management",
+      "method": "PATCH",
+      "path": "/bills/{id}/approve",
+      "summary": "Approve electricity bill",
+      "pathParams": { "id": "{{electricityBillId}}" }
+    },
+    {
+      "step": 47,
+      "phase": "FINANCE",
+      "role": "FINANCE",
+      "tag": "Payment Management",
+      "method": "POST",
+      "path": "/payments",
+      "summary": "Partial payment on water bill (MOMO)",
+      "requestBody": {
+        "billId": "{{waterBillId}}",
+        "amountPaid": 5000,
+        "paymentMethod": "MOMO",
+        "paymentDate": "2026-06-06T10:00:00"
+      },
+      "note": "Replace billId with number from step 36. paymentMethod: MOMO | BANK | CARD | CASH"
+    },
+    {
+      "step": 48,
+      "phase": "FINANCE",
+      "role": "FINANCE",
+      "tag": "Payment Management",
+      "method": "POST",
+      "path": "/payments",
+      "summary": "Pay remaining balance (check balance from step 47 response)",
+      "requestBody": {
+        "billId": "{{waterBillId}}",
+        "amountPaid": 10000,
+        "paymentMethod": "BANK",
+        "paymentDate": "2026-06-06T11:00:00"
+      },
+      "note": "Set amountPaid = remaining balance from bill to reach PAID status"
+    },
+    {
+      "step": 49,
+      "phase": "FINANCE",
+      "role": "FINANCE",
+      "tag": "Payment Management",
+      "method": "GET",
+      "path": "/payments/bill/{billId}",
+      "summary": "Payment history for bill",
+      "pathParams": { "billId": "{{waterBillId}}" },
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 50,
+      "phase": "FINANCE",
+      "role": "FINANCE",
+      "tag": "Payment Management",
+      "method": "GET",
+      "path": "/payments/customer/{customerId}",
+      "summary": "All payments for customer 1",
+      "pathParams": { "customerId": 1 },
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 51,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Authentication",
+      "method": "POST",
+      "path": "/auth/login",
+      "summary": "Login as seeded customer",
+      "authorize": false,
+      "requestBody": {
+        "email": "customer@utilitybilling.rw",
+        "password": "Admin@12345"
+      },
+      "saveFromResponse": { "customerToken": "data.accessToken" }
+    },
+    {
+      "step": 52,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Billing Management",
+      "method": "GET",
+      "path": "/bills/me",
+      "summary": "Own bills",
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 53,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Payment Management",
+      "method": "GET",
+      "path": "/payments/me",
+      "summary": "Own payments",
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 54,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Meter Management",
+      "method": "GET",
+      "path": "/meters/me",
+      "summary": "Own meters (WM-10001 + EM-10002)"
+    },
+    {
+      "step": 55,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Notification Management",
+      "method": "GET",
+      "path": "/notifications/me",
+      "summary": "Own notifications",
+      "queryParams": { "page": 1 },
+      "saveFromResponse": { "notificationId": "data.content[0].id" }
+    },
+    {
+      "step": 56,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Notification Management",
+      "method": "GET",
+      "path": "/notifications/customer/{customerId}",
+      "summary": "Notifications for customer 1",
+      "pathParams": { "customerId": 1 },
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 57,
+      "phase": "CUSTOMER",
+      "role": "CUSTOMER",
+      "tag": "Notification Management",
+      "method": "PATCH",
+      "path": "/notifications/{id}/read",
+      "summary": "Mark notification as read",
+      "pathParams": { "id": "{{notificationId}}" }
+    },
+    {
+      "step": 58,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "User Management",
+      "method": "PUT",
+      "path": "/users/{id}/role",
+      "summary": "Upgrade user to OPERATOR (use newStaffUserId or swagger customer user id)",
+      "pathParams": { "id": "{{newStaffUserId}}" },
+      "requestBody": {
+        "role": "ROLE_OPERATOR"
+      }
+    },
+    {
+      "step": 59,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "User Management",
+      "method": "DELETE",
+      "path": "/users/{id}/role",
+      "summary": "Revoke role back to CUSTOMER",
+      "pathParams": { "id": "{{newStaffUserId}}" }
+    },
+    {
+      "step": 60,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "Billing Management",
+      "method": "POST",
+      "path": "/bills/process-overdue",
+      "summary": "Process overdue bills (penalties + disconnect)"
+    },
+    {
+      "step": 61,
+      "phase": "ADMIN",
+      "role": "ADMIN",
+      "tag": "Audit Management",
+      "method": "GET",
+      "path": "/audit-logs",
+      "summary": "View audit trail",
+      "queryParams": { "page": 1 }
+    },
+    {
+      "step": 62,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Management",
+      "method": "PATCH",
+      "path": "/meters/{id}/deactivate",
+      "summary": "Deactivate meter 4 (prepaid inactive)",
+      "pathParams": { "id": 4 }
+    },
+    {
+      "step": 63,
+      "phase": "OPERATOR",
+      "role": "OPERATOR",
+      "tag": "Meter Management",
+      "method": "PATCH",
+      "path": "/meters/{id}/activate",
+      "summary": "Re-activate meter",
+      "pathParams": { "id": 4 }
+    }
+  ],
+  "pasteOnly": {
+    "_comment": "Copy ONLY the JSON below into Swagger request body fields",
+    "POST /auth/login (admin)": {
+      "email": "admin@utilitybilling.rw",
+      "password": "Admin@12345"
+    },
+    "POST /auth/login (operator)": {
+      "email": "operator@utilitybilling.rw",
+      "password": "Admin@12345"
+    },
+    "POST /auth/login (finance)": {
+      "email": "finance@utilitybilling.rw",
+      "password": "Admin@12345"
+    },
+    "POST /auth/login (customer)": {
+      "email": "customer@utilitybilling.rw",
+      "password": "Admin@12345"
+    },
+    "POST /auth/register": {
+      "firstName": "Swagger",
+      "lastName": "Customer",
+      "nationalId": "1199887766558801",
+      "email": "swagger.customer@email.rw",
+      "phoneCountryCode": "+250",
+      "phoneNumber": "0788118801",
+      "address": "Kigali, Nyarugenge",
+      "dateOfBirth": "1998-06-15",
+      "password": "SwaggerCust@123"
+    },
+    "POST /auth/first-login/change-password": {
+      "email": "swagger.operator@email.rw",
+      "temporaryPassword": "PASTE_FROM_CREATE_USER_RESPONSE",
+      "newPassword": "SwaggerOp@123"
+    },
+    "PUT /auth/profile": {
+      "firstName": "Swagger",
+      "lastName": "Customer Updated",
+      "phoneCountryCode": "+250",
+      "phoneNumber": "0788118801"
+    },
+    "PUT /auth/change-password": {
+      "currentPassword": "SwaggerCust@123",
+      "newPassword": "SwaggerCust@456"
+    },
+    "POST /users": {
+      "firstName": "Swagger",
+      "lastName": "Operator",
+      "email": "swagger.operator@email.rw",
+      "phoneCountryCode": "+250",
+      "phoneNumber": "0788111001",
+      "role": "ROLE_OPERATOR"
+    },
+    "PUT /users/{id}/role": {
+      "role": "ROLE_OPERATOR"
+    },
+    "PUT /customers/me": {
+      "address": "Kigali, Gasabo - Swagger Updated",
+      "phoneCountryCode": "+250",
+      "phoneNumber": "0788118801"
+    },
+    "POST /meters": {
+      "meterNumber": "WM-10005",
+      "meterType": "WATER",
+      "installationDate": "2024-06-01",
+      "customerId": 2,
+      "billingMode": "POSTPAID"
+    },
+    "PUT /meters/{id}": {
+      "meterNumber": "WM-10005",
+      "meterType": "WATER",
+      "installationDate": "2024-06-01",
+      "customerId": 2,
+      "billingMode": "POSTPAID"
+    },
+    "POST /readings (new meter first reading)": {
+      "meterId": 5,
+      "previousReading": 0,
+      "currentReading": 45.5,
+      "readingDate": "2026-06-01"
+    },
+    "POST /readings (meter 1 June)": {
+      "meterId": 1,
+      "previousReading": 125.5,
+      "currentReading": 140.0,
+      "readingDate": "2026-06-05"
+    },
+    "POST /readings (meter 2 June)": {
+      "meterId": 2,
+      "previousReading": 620.0,
+      "currentReading": 680.0,
+      "readingDate": "2026-06-05"
+    },
+    "PUT /readings/{id}": {
+      "meterId": 1,
+      "previousReading": 125.5,
+      "currentReading": 141.0,
+      "readingDate": "2026-06-05"
+    },
+    "POST /tariffs": {
+      "meterType": "WATER",
+      "tariffName": "Residential Water Tariff v2",
+      "ratePerUnit": 460.0,
+      "fixedCharge": 2100.0,
+      "vatPercentage": 18.0,
+      "latePenaltyPercentage": 5.0,
+      "effectiveDate": "2026-06-01",
+      "tiers": [
+        { "tierName": "0-10 units", "minUnits": 0, "maxUnits": 10, "ratePerUnit": 410.0 },
+        { "tierName": "11-30 units", "minUnits": 10, "maxUnits": 30, "ratePerUnit": 460.0 },
+        { "tierName": "31-100 units", "minUnits": 30, "maxUnits": 100, "ratePerUnit": 510.0 }
+      ]
+    },
+    "PUT /tariffs/{id}": {
+      "meterType": "WATER",
+      "tariffName": "Residential Water Tariff v1",
+      "ratePerUnit": 450.0,
+      "fixedCharge": 2000.0,
+      "vatPercentage": 18.0,
+      "latePenaltyPercentage": 5.0,
+      "effectiveDate": "2024-01-01",
+      "tiers": [
+        { "tierName": "0-10 units", "minUnits": 0, "maxUnits": 10, "ratePerUnit": 400.0 },
+        { "tierName": "11-30 units", "minUnits": 10, "maxUnits": 30, "ratePerUnit": 450.0 },
+        { "tierName": "31-100 units", "minUnits": 30, "maxUnits": 100, "ratePerUnit": 500.0 }
+      ]
+    },
+    "POST /bills/generate (water May)": {
+      "meterId": 1,
+      "billingMonth": 5,
+      "billingYear": 2026
+    },
+    "POST /bills/generate (electricity May)": {
+      "meterId": 2,
+      "billingMonth": 5,
+      "billingYear": 2026
+    },
+    "POST /bills/generate (water June)": {
+      "meterId": 1,
+      "billingMonth": 6,
+      "billingYear": 2026
+    },
+    "POST /bills/generate-monthly": {
+      "billingMonth": 6,
+      "billingYear": 2026
+    },
+    "POST /payments (partial MOMO)": {
+      "billId": 1,
+      "amountPaid": 5000,
+      "paymentMethod": "MOMO",
+      "paymentDate": "2026-06-06T10:00:00"
+    },
+    "POST /payments (full BANK)": {
+      "billId": 1,
+      "amountPaid": 10000,
+      "paymentMethod": "BANK",
+      "paymentDate": "2026-06-06T11:00:00"
+    }
+  },
+  "quickPathParams": {
+    "GET /users/1": { "id": 1 },
+    "GET /customers/1": { "id": 1 },
+    "PATCH /customers/4/activate": { "id": 4 },
+    "PATCH /customers/4/deactivate": { "id": 4 },
+    "GET /meters/customer/1": { "customerId": 1 },
+    "GET /meters/1": { "id": 1 },
+    "GET /readings/meter/1": { "meterId": 1 },
+    "GET /tariffs/1": { "id": 1 },
+    "GET /tariffs/type/WATER": { "meterType": "WATER" },
+    "PATCH /bills/1/approve": { "id": 1 },
+    "POST /bills/1/resend-email": { "id": 1 },
+    "GET /bills/1": { "id": 1 },
+    "GET /bills/customer/1": { "customerId": 1 },
+    "GET /payments/bill/1": { "billId": 1 },
+    "GET /payments/customer/1": { "customerId": 1 },
+    "GET /notifications/customer/1": { "customerId": 1 },
+    "PATCH /notifications/1/read": { "id": 1 }
+  },
+  "quickQueryParams": {
+    "GET /users": { "page": 1 },
+    "GET /customers": { "page": 1 },
+    "GET /readings/meter/1": { "page": 1 },
+    "GET /readings/monthly": { "month": 6, "year": 2026 },
+    "GET /tariffs": { "page": 1 },
+    "GET /tariffs/type/WATER": { "page": 1 },
+    "GET /bills": { "page": 1 },
+    "GET /bills/me": { "page": 1 },
+    "GET /bills/monthly": { "month": 5, "year": 2026, "page": 1 },
+    "GET /bills/customer/1": { "page": 1 },
+    "GET /payments/me": { "page": 1 },
+    "GET /payments/bill/1": { "page": 1 },
+    "GET /notifications/me": { "page": 1 },
+    "GET /audit-logs": { "page": 1 }
+  },
+  "emailTestingOnly": {
+    "_comment": "Test SMTP without regenerating or approving bills",
+    "order": [
+      "POST /auth/login (finance) → Authorize",
+      "POST /bills/{id}/resend-email (use bill id 1 or any existing bill)",
+      "Check response: data.sent, data.channel, data.recipient"
+    ]
+  },
+  "billingFlowMinimum": {
+    "_comment": "Shortest path to generate + approve + pay a bill",
+    "order": [
+      "POST /auth/login (operator) → Authorize",
+      "POST /readings (meter 1 June) — skip if reading exists",
+      "POST /auth/login (admin) → Authorize",
+      "POST /bills/generate (water May OR June — match reading month)",
+      "POST /auth/login (finance) → Authorize",
+      "PATCH /bills/{id}/approve",
+      "POST /payments (partial MOMO)",
+      "POST /auth/login (customer) → Authorize",
+      "GET /bills/me",
+      "GET /notifications/me"
+    ]
+  },
+  "resetDatabase": {
+    "macOS": [
+      "export PGPASSWORD=123",
+      "tail -n +7 database/schema.sql | psql -U postgres -d utility_billing_db",
+      "psql -U postgres -d utility_billing_db -f database/migration-v2-business-rules.sql",
+      "psql -U postgres -d utility_billing_db -f database/migration-v3-wasac-business-rules.sql",
+      "psql -U postgres -d utility_billing_db -f database/migration-v4-project-spec.sql",
+      "tail -n +7 database/test-data.sql | psql -U postgres -d utility_billing_db"
+    ],
+    "thenRestartApp": "export JAVA_HOME=$(/usr/libexec/java_home -v 21) && mvn spring-boot:run"
+  }
+}

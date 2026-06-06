@@ -114,11 +114,13 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<PaymentResponse> getPaymentHistory(Long billId, Pageable pageable) {
         return paymentRepository.findByBillId(billId, pageable).map(paymentMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<PaymentResponse> getCustomerPaymentHistory(Long customerId, Pageable pageable) {
         return paymentRepository.findByBillCustomerId(customerId, pageable).map(paymentMapper::toResponse);
     }

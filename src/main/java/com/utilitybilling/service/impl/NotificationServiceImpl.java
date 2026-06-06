@@ -27,6 +27,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final CustomerAccessService customerAccessService;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<NotificationResponse> getNotifications(Long customerId, Pageable pageable) {
         return notificationRepository.findByCustomerId(customerId, pageable)
                 .map(notificationMapper::toResponse);

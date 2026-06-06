@@ -1,8 +1,11 @@
 package com.utilitybilling.service.impl;
 
+import com.utilitybilling.dto.bill.ApproveBillResponse;
 import com.utilitybilling.dto.bill.BillRequest;
 import com.utilitybilling.dto.bill.BillResponse;
 import com.utilitybilling.dto.bill.GenerateMonthlyBillsRequest;
+import com.utilitybilling.dto.bill.GenerateMonthlyBillsResponse;
+import com.utilitybilling.dto.email.EmailDeliveryResult;
 import com.utilitybilling.entity.Bill;
 import com.utilitybilling.entity.Meter;
 import com.utilitybilling.entity.MeterReading;
@@ -29,6 +32,7 @@ import com.utilitybilling.util.BillingCalculator;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -38,10 +42,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BillServiceImpl implements BillService {
 
     private final BillRepository billRepository;
@@ -120,19 +127,12 @@ public class BillServiceImpl implements BillService {
         Bill saved = billRepository.save(bill);
         auditService.log(actorEmail, AuditActionType.BILL_GENERATED, "Bill", saved.getId(), null,
                 saved.getBillNumber());
-        emailService.sendBillGeneratedEmail(
-                saved.getCustomer().getEmail(),
-                saved.getCustomer().getFullNames(),
-                saved.getBillNumber(),
-                saved.getTotalAmount(),
-                saved.getBillingMonth(),
-                saved.getBillingYear());
         return billMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
-    public BillResponse approveBill(Long id, String actorEmail) {
+    public ApproveBillResponse approveBill(Long id, String actorEmail) {
         Bill bill = findBill(id);
 
         if (Boolean.TRUE.equals(bill.getApproved())) {
@@ -150,20 +150,34 @@ public class BillServiceImpl implements BillService {
         Bill saved = billRepository.save(bill);
         auditService.log(actorEmail, AuditActionType.BILL_APPROVED, "Bill", saved.getId(),
                 "approved=false", "approved=true by " + actorEmail);
-        return billMapper.toResponse(saved);
+        EmailDeliveryResult emailDelivery = notifyCustomerBillApproved(saved);
+        return ApproveBillResponse.builder()
+                .bill(billMapper.toResponse(saved))
+                .emailDelivery(emailDelivery)
+                .build();
     }
 
     @Override
+    @Transactional
+    public EmailDeliveryResult resendBillEmail(Long id) {
+        Bill bill = findBill(id);
+        return notifyCustomerBillApproved(bill);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<BillResponse> getBills(Pageable pageable) {
         return billRepository.findAll(pageable).map(billMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<BillResponse> getCustomerBills(Long customerId, Pageable pageable) {
         return billRepository.findByCustomerId(customerId, pageable).map(billMapper::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<BillResponse> getMonthlyBills(int month, int year, Pageable pageable) {
         return billRepository.findByBillingMonthAndBillingYear(month, year, pageable)
                 .map(billMapper::toResponse);
@@ -171,11 +185,27 @@ public class BillServiceImpl implements BillService {
 
     @Override
     @Transactional
-    public void generateMonthlyBills(GenerateMonthlyBillsRequest request) {
+    public GenerateMonthlyBillsResponse generateMonthlyBills(GenerateMonthlyBillsRequest request) {
+        Set<Long> existingBillIds = new HashSet<>();
+        billRepository.findByBillingMonthAndBillingYear(
+                        request.getBillingMonth(), request.getBillingYear(), Pageable.unpaged())
+                .forEach(bill -> existingBillIds.add(bill.getId()));
+
         entityManager.createNativeQuery("CALL generate_monthly_bills(:month, :year)")
                 .setParameter("month", request.getBillingMonth())
                 .setParameter("year", request.getBillingYear())
                 .executeUpdate();
+
+        List<Bill> newBills = billRepository.findByBillingMonthAndBillingYear(
+                        request.getBillingMonth(), request.getBillingYear(), Pageable.unpaged())
+                .stream()
+                .filter(bill -> !existingBillIds.contains(bill.getId()))
+                .toList();
+
+        return GenerateMonthlyBillsResponse.builder()
+                .billsGenerated(newBills.size())
+                .emailsSent(0)
+                .build();
     }
 
     @Override
@@ -204,6 +234,7 @@ public class BillServiceImpl implements BillService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BillResponse getBillById(Long id, String requesterEmail) {
         Bill bill = findBill(id);
         customerAccessService.assertStaffOrOwnCustomer(requesterEmail, bill.getCustomer().getId());
@@ -225,5 +256,26 @@ public class BillServiceImpl implements BillService {
         if (meter.getCustomer().getStatus() != CustomerStatus.ACTIVE) {
             throw new BusinessRuleException("Cannot bill inactive or suspended customer");
         }
+    }
+
+    private EmailDeliveryResult notifyCustomerBillApproved(Bill bill) {
+        String email = bill.getCustomer().getEmail();
+        if (email == null || email.isBlank()) {
+            log.warn("Bill {} not emailed — customer {} has no email address", bill.getBillNumber(), bill.getCustomer().getId());
+            return EmailDeliveryResult.builder()
+                    .sent(false)
+                    .channel("FAILED")
+                    .recipient("")
+                    .detail("Customer has no email address on file.")
+                    .build();
+        }
+        return emailService.sendBillGeneratedEmail(
+                email,
+                bill.getCustomer().getFullNames(),
+                bill.getBillNumber(),
+                bill.getTotalAmount(),
+                bill.getBillingMonth(),
+                bill.getBillingYear(),
+                bill.getDueDate());
     }
 }
